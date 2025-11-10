@@ -1,0 +1,122 @@
+@page "/usersearch"
+@using UserSearchApp.Data
+@using UserSearchApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext
+@rendermode InteractiveServer
+
+<PageTitle>User Search</PageTitle>
+
+<h1>User Search</h1>
+
+<p>Search for users by firstname, lastname, or phone number to view their complete information with address details.</p>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Search Criteria</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="firstName" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="firstName" @bind="searchFirstName" placeholder="Enter first name" />
+            </div>
+            <div class="col-md-4">
+                <label for="lastName" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="lastName" @bind="searchLastName" placeholder="Enter last name" />
+            </div>
+            <div class="col-md-4">
+                <label for="phoneNumber" class="form-label">Phone Number</label>
+                <input type="text" class="form-control" id="phoneNumber" @bind="searchPhoneNumber" placeholder="Enter phone number" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary" @onclick="SearchUsers">
+                <i class="bi bi-search"></i> Search
+            </button>
+            <button class="btn btn-secondary ms-2" @onclick="ClearSearch">
+                <i class="bi bi-x-circle"></i> Clear
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (searchPerformed)
+{
+    @if (searchResults != null && searchResults.Any())
+    {
+        <div class="alert alert-success" role="alert">
+            <strong>Search Results:</strong> Found @searchResults.Count matching record(s).
+        </div>
+
+        <div class="row">
+            @foreach (var user in searchResults)
+            {
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">@user.FirstName @user.LastName</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                <strong>Phone Number:</strong> @user.PhoneNumber<br />
+                                <strong>Address:</strong> @user.Address
+                            </p>
+                        </div>
+                        <div class="card-footer text-muted">
+                            User ID: @user.Id
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning" role="alert">
+            <strong>No Results Found!</strong> No users matched your search criteria. Please try different search terms.
+        </div>
+    }
+}
+
+@code {
+    private string searchFirstName = string.Empty;
+    private string searchLastName = string.Empty;
+    private string searchPhoneNumber = string.Empty;
+    private List<User>? searchResults;
+    private bool searchPerformed = false;
+
+    private async Task SearchUsers()
+    {
+        searchPerformed = true;
+
+        // Build query dynamically based on filled fields
+        var query = DbContext.Users.AsQueryable();
+
+        // Apply filters if search criteria are provided
+        if (!string.IsNullOrWhiteSpace(searchFirstName))
+        {
+            query = query.Where(u => u.FirstName.Contains(searchFirstName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchLastName))
+        {
+            query = query.Where(u => u.LastName.Contains(searchLastName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchPhoneNumber))
+        {
+            query = query.Where(u => u.PhoneNumber.Contains(searchPhoneNumber));
+        }
+
+        // Execute query and get results
+        searchResults = await query.ToListAsync();
+    }
+
+    private void ClearSearch()
+    {
+        searchFirstName = string.Empty;
+        searchLastName = string.Empty;
+        searchPhoneNumber = string.Empty;
+        searchResults = null;
+        searchPerformed = false;
+    }
+}
